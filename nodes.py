@@ -26,15 +26,21 @@ class GuidanceInterval:
         def guidance_function(args):
             sigma = args["sigma"][0]
             cond_denoised = args["cond_denoised"]
-            uncond_denoised = args["uncond_denoised"] 
+            uncond_denoised = args["uncond_denoised"]
             x_in = args["input"]
 
             if sigma_min < sigma <= sigma_max:
                 # Apply guidance in interval
-                return x_in - guidance_weight*cond_denoised - (1.0-guidance_weight)*uncond_denoised
-            else:  
+                denoised = uncond_denoised + guidance_weight * (cond_denoised - uncond_denoised)
+            else:
                 # Disable guidance outside interval
-                return x_in - cond_denoised
+                denoised = uncond_denoised
+
+            # Clip the denoised image to a valid range
+            denoised = torch.clamp(denoised, -1.0, 1.0)
+
+            # Compute the final output
+            return x_in - denoised
 
         m = model.clone()
         m.set_model_sampler_cfg_function(guidance_function)
