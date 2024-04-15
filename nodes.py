@@ -3,27 +3,33 @@ import comfy.samplers
 import torch
 import math
 
+original_sampling_function = deepcopy(comfy.samplers.sampling_function)
 
 def sampling_function_patched(model, x, timestep, uncond, cond, cond_scale, model_options={}, seed=None):
     sigma = timestep[0]
     sigma_min = model_options.get("sigma_min", 0.28)
     sigma_max = model_options.get("sigma_max", 5.42)
+    use_guidance_interval = model_options.get("use_guidance_interval", False)
+    if use_guidance_interval:
+        guidance_weight = model_options.get("guidance_weight", 16.0)
 
-    if sigma_min < sigma <= sigma_max:
-        # Apply guidance within the interval
         conds = [cond, uncond]
+        if sigma_min < sigma <= sigma_max:
+            # # Apply guidance within the interval
+            # conds = [cond, uncond]
+            pass
+        else:
+            # # Disable guidance outside the interval
+            # conds = [None, uncond]
+            guidance_weight = 0.0
+
         out = comfy.samplers.calc_cond_batch(model, conds, x, timestep, model_options)
         cond_pred, uncond_pred = out
-        denoised = uncond_pred + cond_scale * (cond_pred - uncond_pred)
+        denoised = uncond_pred + guidance_weight * (cond_pred - uncond_pred)
+
+        return denoised
     else:
-        # Disable guidance outside the interval
-        out = comfy.samplers.calc_cond_batch(model, [cond], x, timestep, model_options)
-        denoised = out[0]
-
-    # # Clamp the denoised output
-    # denoised = torch.clamp(denoised, -1.0, 1.0)
-
-    return denoised
+        return original_sampling_function(model, x, timestep, uncond, cond, cond_scale, model_options, seed)
 
 class GuidanceInterval:
     @classmethod
@@ -43,6 +49,7 @@ class GuidanceInterval:
         comfy.samplers.sampling_function = sampling_function_patched
         
         m = model.clone()
+        m.model_options["use_guidance_interval"] = True
         m.model_options["guidance_weight"] = guidance_weight
         m.model_options["sigma_min"] = sigma_min
         m.model_options["sigma_max"] = sigma_max
