@@ -3,7 +3,6 @@ import comfy.samplers
 import torch
 import math
 
-original_sampling_function = deepcopy(comfy.samplers.sampling_function)
 
 def sampling_function_patched(model, x, timestep, uncond, cond, cond_scale, model_options={}, seed=None):
     sigma = timestep[0]
@@ -21,8 +20,8 @@ def sampling_function_patched(model, x, timestep, uncond, cond, cond_scale, mode
         out = comfy.samplers.calc_cond_batch(model, [cond], x, timestep, model_options)
         denoised = out[0]
 
-    # Clamp the denoised output
-    denoised = torch.clamp(denoised, -1.0, 1.0)
+    # # Clamp the denoised output
+    # denoised = torch.clamp(denoised, -1.0, 1.0)
 
     return denoised
 
