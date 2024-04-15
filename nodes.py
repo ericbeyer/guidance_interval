@@ -25,9 +25,16 @@ def sampling_function_patched(model, x, timestep, uncond, cond, cond_scale, mode
 
         out = comfy.samplers.calc_cond_batch(model, conds, x, timestep, model_options)
         cond_pred, uncond_pred = out
-        denoised = uncond_pred + guidance_weight * (cond_pred - uncond_pred)
+        cfg_result = uncond_pred + guidance_weight * (cond_pred - uncond_pred)
 
-        return denoised
+
+        for fn in model_options.get("sampler_post_cfg_function", []):
+            args = {"denoised": cfg_result, "cond": cond, "uncond": uncond, "model": model, "uncond_denoised": uncond_pred, "cond_denoised": cond_pred,
+                    "sigma": timestep, "model_options": model_options, "input": x}
+            cfg_result = fn(args)
+
+        return cfg_result
+
     else:
         return original_sampling_function(model, x, timestep, uncond, cond, cond_scale, model_options, seed)
 
