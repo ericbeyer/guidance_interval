@@ -15,17 +15,17 @@ def sampling_function_patched(model, x, timestep, uncond, cond, cond_scale, mode
 
         conds = [cond, uncond]
         if sigma_min < sigma <= sigma_max:
-            # # Apply guidance within the interval
-            # conds = [cond, uncond]
-            pass
+            # Apply guidance within the interval
+            conds = [cond, uncond]
+            out = comfy.samplers.calc_cond_batch(model, conds, x, timestep, model_options)
+            cond_pred, uncond_pred = out
+            cfg_result = uncond_pred + guidance_weight * (cond_pred - uncond_pred)
         else:
             # # Disable guidance outside the interval
-            # conds = [None, uncond]
-            guidance_weight = 0.0
-
-        out = comfy.samplers.calc_cond_batch(model, conds, x, timestep, model_options)
-        cond_pred, uncond_pred = out
-        cfg_result = uncond_pred + guidance_weight * (cond_pred - uncond_pred)
+            conds = [None, uncond]
+            out = comfy.samplers.calc_cond_batch(model, conds, x, timestep, model_options)
+            _, uncond_pred = out
+            cfg_result = uncond_pred
 
 
         for fn in model_options.get("sampler_post_cfg_function", []):
