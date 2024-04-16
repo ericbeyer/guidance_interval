@@ -24,7 +24,7 @@ def sampling_function_patched(model, x, timestep, uncond, cond, cond_scale, mode
             # # Disable guidance outside the interval
             conds = [None, uncond]
             out = comfy.samplers.calc_cond_batch(model, conds, x, timestep, model_options)
-            _, uncond_pred = out
+            cond_pred, uncond_pred = out
             cfg_result = uncond_pred
 
 
